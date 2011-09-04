@@ -1,0 +1,66 @@
+#! /usr/bin/php
+<?php
+
+require_once 'src/api.php';
+require_once 'src/api/response.php';
+require_once 'src/translation.php';
+require_once 'src/config.php';
+
+
+if (!isset($argv[1])) {
+    
+    die('USAGE: '.PHP_EOL.''.$argv[0].' <phrase> [filter-from] [filter-to]'.PHP_EOL);
+}
+
+$phrase = $argv[1];
+
+
+$ini_file = '/etc/seslisozluk.ini';
+
+if (isset($_ENV['HOME']) && file_exists($_ENV['HOME'].'/.seslisozluk.ini')) {
+    
+    $ini_file = $_ENV['HOME'].'/.seslisozluk.ini';
+}
+
+$config = Seslisozluk\Config::CreateFromIniFile($ini_file);
+
+
+$filterFrom = $config->getLangFrom(); 
+
+$filterTo = $config->getLangTo();
+
+if (isset($argv[2])) {
+    
+    $filterFrom = $argv[2];
+}
+
+if (isset($argv[3])) {
+    
+    $filterTo = $argv[3];
+}
+
+
+$sapi = new Seslisozluk\Api();
+
+$response = $sapi->lookup($phrase, $filterFrom, $filterTo);
+
+if ($response->translationCount() > 0) {
+    
+    //print_r($response);
+    
+    print_r($response->getFirstTranslation()->getTranslate().PHP_EOL);
+    
+    if ($config->getAutoPlayPronounciation()) {
+        
+        $response->playPronounciationOnBash();
+    }    
+    
+}elseif($response->hasSuccesstions()){
+    
+    echo "did you mean: ".implode(', ', $response->getSuccestions())."?\n";
+        
+}else{
+    
+    echo "no result found for: $phrase\n";
+    //print_r($response);
+}
